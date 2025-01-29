@@ -8,104 +8,59 @@ import os
 
 def read_testing_data():
     CUR_DIR = os.path.abspath(os.path.dirname(__file__))
-    d1_data = pd.read_csv(str(CUR_DIR)+'/data/D1.csv')
-    d2_data = pd.read_csv(str(CUR_DIR)+'/data/D2.csv')
-    return d1_data, d2_data
+    data = pd.read_csv(str(CUR_DIR)+'/data/semiconductor_testing_data.csv')
+    return data
 
-def create_table(conn):
-    cur = conn.cursor() 
+def upload_csv_to_postgresql(db_params, table_name):
     try:
-        cur.execute("""DROP TABLE IF EXISTS d1_semiconductor_testing_data;
-        CREATE TABLE IF NOT EXISTS d1_semiconductor_testing_data (
-            MaterialID INT,
-            StepID INT,
-            duration_ms FLOAT,
-            feature_1 FLOAT,
-            feature_2 FLOAT,
-            feature_3 FLOAT,
-            feature_4 FLOAT,
-            feature_5 FLOAT,
-            feature_6 FLOAT,
-            feature_7 FLOAT,
-            feature_8 FLOAT,
-            feature_9 FLOAT,
-            feature_10 FLOAT,
-            feature_11 FLOAT,
-            feature_12 FLOAT,
-            feature_13 FLOAT,
-            feature_14 FLOAT,
-            feature_15 FLOAT,
-            is_test INT,
-            target INT
-        );
+        conn = psycopg2.connect(**db_params)
+        cursor = conn.cursor()
+        
+        df = read_testing_data()
 
-        DROP TABLE IF EXISTS d2_semiconductor_testing_data;
-        CREATE TABLE IF NOT EXISTS d2_semiconductor_testing_data (
-            MaterialID INT,
-            StepID INT,
-            duration_ms FLOAT,
-            feature_1 FLOAT,
-            feature_2 FLOAT,
-            feature_3 FLOAT,
-            feature_4 FLOAT,
-            feature_5 FLOAT,
-            feature_6 FLOAT,
-            feature_7 FLOAT,
-            feature_8 FLOAT,
-            feature_9 FLOAT,
-            feature_10 FLOAT,
-            feature_11 FLOAT,
-            feature_12 FLOAT,
-            feature_13 FLOAT,
-            feature_14 FLOAT,
-            feature_15 FLOAT,
-            feature_16 FLOAT,
-            feature_17 FLOAT,
-            feature_18 FLOAT,
-            feature_19 FLOAT,
-            feature_20 FLOAT,
-            is_test INT,
-            target INT
-        );
-
+        cursor.execute(f"""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = '{table_name}'
+            );
         """)
-    except (Exception, psycopg2.DatabaseError) as error: 
-        print(error) 
-        conn.rollback()
-    else:
-        conn.commit()
+        table_exists = cursor.fetchone()[0]
 
-def insert_values(conn, df, table):
-    print(type(df))
-    tuples = [tuple(x) for x in df.to_numpy()]
-    cols = ','.join(list(df.columns)) 
-    query = """INSERT INTO %s(%s) VALUES %%s;""" % (table, cols) 
-    cursor = conn.cursor() 
-    try: 
-        extras.execute_values(cursor, query, tuples) 
-        conn.commit() 
-    except (Exception, psycopg2.DatabaseError) as error: 
-        print("Error: %s" % error) 
-        conn.rollback() 
-        cursor.close() 
-        return 1
-    cursor.close()
+        if not table_exists:
+            columns = ', '.join([f'"{col}" VARCHAR' for col in df.columns])
+            cursor.execute(f"""
+                CREATE TABLE {table_name} ({columns});
+            """)
+            print(f"Table '{table_name}' created.")
+        
+        for index, row in df.iterrows():
+            insert_query = f"""
+                INSERT INTO {table_name} 
+                VALUES ({', '.join(['%s'] * len(df.columns))});
+            """
+            cursor.execute(insert_query, tuple(row))
+        
+        conn.commit()
+        print(f"Data uploaded to table '{table_name}'.")
+    
+    except Exception as e:
+        print(f"Error: {e}")
+
 
 def main():
     
-    conn = psycopg2.connect(
-        host="host.docker.internal", 
-        database="postgres",
-        user="postgres",
-        password="password")
-     
-    print("Transforming...")
-    create_table(conn)
-    d1_data, d2_data = read_testing_data()
-    print(d1_data, d2_data)
-    print("Loading...")
-    insert_values(conn, d1_data, 'd1_semiconductor_testing_data')
-    insert_values(conn, d2_data, 'd2_semiconductor_testing_data')
+    db_params = {
+        'dbname': 'postgres',
+        'user': 'postgres',
+        'password': 'password',
+        'host': 'host.docker.internal',
+        'port': '5432'
+    }
+    
+    table_name = 'semiconductor_testing_data'
+
+    upload_csv_to_postgresql(db_params, table_name)
+
     print("Finished.")
 
 if __name__ == "__main__":

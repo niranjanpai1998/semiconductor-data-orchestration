@@ -7,8 +7,8 @@ import os
 from scripts.upload_to_mongodb_ETL import upload_csv_to_mongodb 
 
 CUR_DIR = os.path.abspath(os.path.dirname(__file__))
-CSV_FILE_PATH = os.path.join(CUR_DIR, Variable.get("csv_file_path", 'scripts/data/D1.csv')) 
-MONGO_COLLECTION = Variable.get("mongo_collection", 'D1')
+CSV_FILE_PATH = os.path.join(CUR_DIR, Variable.get("csv_file_path", 'scripts/data/semiconductor_testing_data.csv')) 
+MONGO_COLLECTION = Variable.get("mongo_collection", 'semiconductor_testing_data')
 
 with DAG(
     dag_id='extract_to_mongodb_DAG',
