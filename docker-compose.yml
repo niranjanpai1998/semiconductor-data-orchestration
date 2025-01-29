@@ -65,7 +65,6 @@ services:
     build: 
       context: .
       dockerfile: Dockerfile
-    restart: always
     command: webserver
     ports:
       - "8080:8080"

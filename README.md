@@ -14,6 +14,7 @@ extract_to_mongodb_DAG: Runs a one-time Python task to load CSV data into MongoD
 ## **Getting Started**
 Install Dependencies: Requires Airflow, MongoDB, and necessary Python packages.
 Configure Variables: Set csv_file_path and mongo_collection in Airflow Variables.
-Usage
+
+## **Usage**
 Deploy the DAGs to Airflow and monitor their status via the Airflow UI.
 DAGs automatically retrieve data and load it into MongoDB for further processing and analysis.
